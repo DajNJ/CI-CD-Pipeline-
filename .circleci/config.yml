@@ -35,7 +35,7 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Run Node Tests
+          name: Run Tests
           command: npm test
 
 workflows:
