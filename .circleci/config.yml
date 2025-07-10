@@ -17,7 +17,7 @@ jobs:
       - run:
           name: Build Docker Image
           command: |
-            docker build -t $DOCKERHUB_USERNAME/static-site .
+            docker build -t $DOCKERHUB_USERNAME/nginx .
 
       - run:
           name: Log in to Docker Hub
@@ -27,7 +27,7 @@ jobs:
       - run:
           name: Push Docker Image
           command: |
-            docker push $DOCKERHUB_USERNAME/static-site
+            docker push $DOCKERHUB_USERNAME/nginx
 
 workflows:
   version: 2
