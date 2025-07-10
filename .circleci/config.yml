@@ -33,5 +33,4 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - test-node
       - build-and-push

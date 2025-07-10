@@ -61,5 +61,16 @@
     "mongodb"
   ],
   "author": "DevOps Bootcamp",
-  "license": "MIT"
+  "license": "MIT",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DajNJ/CI-CD-Pipeline-.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DajNJ/CI-CD-Pipeline-/issues"
+  },
+  "homepage": "https://github.com/DajNJ/CI-CD-Pipeline-#readme"
 }
