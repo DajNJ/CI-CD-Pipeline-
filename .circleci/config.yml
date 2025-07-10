@@ -31,11 +31,11 @@ jobs:
 
   test-node:
     docker:
-      - image: cimg/node:lts
+      - image: cimg/node:current
     steps:
       - checkout
       - run:
-          name: Run Tests
+          name: Run Node Tests
           command: npm test
 
 workflows:
