@@ -1,36 +1,59 @@
 version: 2.1
 
 executors:
-  docker-executor:
+  node-executor:
     docker:
-      - image: cimg/base:stable
+      - image: cimg/node:18.20.2  # Choose Node.js version that matches your app
+    working_directory: ~/project
 
 jobs:
-  build-and-push:
-    executor: docker-executor
+  install-deps:
+    executor: node-executor
     steps:
       - checkout
-
-      - setup_remote_docker:
-          docker_layer_caching: true
-
+      - restore_cache:
+          keys:
+            - node-deps-{{ checksum "package-lock.json" }}
       - run:
-          name: Build Docker Image
-          command: |
-            docker build -t $DOCKERHUB_USERNAME/nginx .
+          name: Install dependencies
+          command: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: node-deps-{{ checksum "package-lock.json" }}
 
+  run-tests:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - node-deps-{{ checksum "package-lock.json" }}
       - run:
-          name: Log in to Docker Hub
-          command: |
-            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          name: Run tests
+          command: npm test
 
+  build:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - node-deps-{{ checksum "package-lock.json" }}
       - run:
-          name: Push Docker Image
+          name: Build frontend (if applicable)
           command: |
-            docker push $DOCKERHUB_USERNAME/nginx
+            echo "No frontend build process detected. Add if needed."
+            # For example, run: npm run build
 
 workflows:
   version: 2
-  build-and-deploy:
+  ci-pipeline:
     jobs:
-      - build-and-push
+      - install-deps
+      - run-tests:
+          requires:
+            - install-deps
+      - build:
+          requires:
+            - run-tests
