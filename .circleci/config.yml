@@ -81,45 +81,64 @@ jobs:
           name: Setup SSH
           command: |
             mkdir -p ~/.ssh
-            echo "Host *" >> ~/.ssh/config
-            echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-            echo "  UserKnownHostsFile /dev/null" >> ~/.ssh/config
+            cat > ~/.ssh/config << EOF
+            Host $EC2_HOST
+              HostName $EC2_HOST
+              User ec2-user
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+              ConnectTimeout 30
+              ServerAliveInterval 60
+              ServerAliveCountMax 3
+              TCPKeepAlive yes
+            EOF
             chmod 600 ~/.ssh/config
 
       - run:
           name: Test SSH Connectivity
           command: |
             echo "Testing SSH connection to $EC2_HOST..."
-            timeout 10 ssh -o ConnectTimeout=5 ec2-user@$EC2_HOST 'echo "SSH connection successful"' || echo "SSH connection failed"
+            for i in {1..3}; do
+              echo "Attempt $i/3"
+              if ssh -v ec2-user@$EC2_HOST 'echo "SSH connection successful"'; then
+                echo "✅ SSH connection established"
+                exit 0
+              fi
+              sleep 5
+            done
+            echo "❌ SSH connection failed after 3 attempts"
 
       - run:
           name: Deploy to EC2
           command: |
-            # Try SSH deployment first
-            if timeout 30 ssh -o ConnectTimeout=10 ec2-user@$EC2_HOST '
+            if ssh ec2-user@$EC2_HOST '
+              # Install Docker if needed
               if ! command -v docker &> /dev/null; then
-                sudo yum update -y && sudo yum install -y docker
-                sudo systemctl start docker && sudo systemctl enable docker
+                sudo yum update -y
+                sudo yum install -y docker
+                sudo systemctl start docker
+                sudo systemctl enable docker
                 sudo usermod -a -G docker ec2-user
+                newgrp docker
               fi
+              
+              # Deploy application
               docker pull '$DOCKERHUB_USER'/demo-app
               docker stop demo-app 2>/dev/null || true
               docker rm demo-app 2>/dev/null || true
               docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app
+              
+              echo "Container status:"
               docker ps
+              sleep 5
+              curl -f http://localhost:80/health || echo "Health check failed"
             '; then
-              echo "✅ Deployed via SSH successfully"
+              echo "✅ Deployment successful"
             else
-              echo "❌ SSH deployment failed. Trying webhook..."
-              if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
-                curl -X POST "$DEPLOY_WEBHOOK_URL" \
-                  -H "Content-Type: application/json" \
-                  -d '{"image":"'$DOCKERHUB_USER'/demo-app","tag":"latest"}' && \
-                echo "✅ Webhook deployment triggered" || echo "❌ Webhook failed"
-              else
-                echo "❌ No webhook URL configured. Manual deployment required:"
-                echo "SSH to $EC2_HOST and run: docker pull $DOCKERHUB_USER/demo-app && docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app"
-              fi
+              echo "❌ Deployment failed - check EC2 security group allows SSH (port 22)"
+              echo "Manual deployment: SSH to $EC2_HOST and run:"
+              echo "docker pull $DOCKERHUB_USER/demo-app"
+              echo "docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app"
             fi
 
 workflows:
