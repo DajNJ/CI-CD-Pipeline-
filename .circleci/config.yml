@@ -31,7 +31,10 @@ jobs:
             - node-deps-{{ checksum "package-lock.json" }}
       - run:
           name: Run tests
-          command: npm test
+          command: npm test 
+      - run: 
+          name: docker-engine
+          command: docker desktop start
 
   build:
     executor: node-executor
@@ -45,9 +48,6 @@ jobs:
           command: |
             echo "No frontend build process detected. Add if needed."
             # For example, run: npm run build
-      - run: 
-          name: docker-engine
-          command: docker desktop start
       - run: 
           name: Docker Image 
           command: docker build -t demo-app . 
