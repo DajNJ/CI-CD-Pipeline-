@@ -54,7 +54,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-
       - setup_remote_docker:
           docker_layer_caching: true
 
@@ -64,10 +63,19 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
             docker push $DOCKERHUB_USER/demo-app
 
+      - add_ssh_keys:
+          fingerprints:
+            - "YOUR SSH KEY FINGERPRINT"  # Get it from CircleCI SSH keys page
+
       - run:
-          name: Trigger Render Deploy
+          name: Deploy on EC2
           command: |
-            curl -X POST https://api.render.com/deploy/ci-cd-demo-app.onrender.com  # ✅ Replace with your actual deploy hook URL
+            ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
+              docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
+              docker pull $DOCKERHUB_USER/demo-app
+              docker stop demo-app || true && docker rm demo-app || true
+              docker run -d -p 3000:3000 --name demo-app $DOCKERHUB_USER/demo-app
+            EOF
 
 workflows:
   version: 2
