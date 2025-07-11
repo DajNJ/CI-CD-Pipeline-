@@ -19,7 +19,7 @@ jobs:
       - run:
           name: Build Docker image
           command: |
-            docker build -t $DOCKERHUB_USER/ci-cd-demo-app .
+            docker build -t $DOCKERHUB_USER/demo-app .
 
       - persist_to_workspace:
           root: .
@@ -39,7 +39,7 @@ jobs:
       - run:
           name: Run Container for Testing
           command: |
-            docker run -d -p 3000:5000 --name test-app $DOCKERHUB_USER/ci-cd-demo-app
+            docker run -d -p 3000:5000 --name test-app $DOCKERHUB_USER/demo-app
             sleep 10  # Give app time to start
             curl --fail http://localhost:3000/health
 
@@ -60,7 +60,7 @@ jobs:
           name: Push Image to Docker Hub
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
-            docker push $DOCKERHUB_USER/ci-cd-demo-app
+            docker push $DOCKERHUB_USER/demo-app
 
       - run:
           name: Trigger Render Deploy
