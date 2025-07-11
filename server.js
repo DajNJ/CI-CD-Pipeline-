@@ -240,12 +240,27 @@ app.use((err, req, res, _next) => {
 
 // Start server only if this file is run directly (not imported)
 if (require.main === module) {
-  app.listen(PORT, 'localhost', () => {
+  const server = app.listen(PORT, () => {
     console.log(`CI/CD Demo App running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Version: ${process.env.APP_VERSION || '1.0.0'}`);
     console.log(`Health Check: http://localhost:${PORT}/health`);
     console.log(`Metrics: http://localhost:${PORT}/metrics`);
+  });
+
+  server.on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
   });
 }
 
