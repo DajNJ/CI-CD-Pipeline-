@@ -81,7 +81,7 @@ jobs:
           name: Setup SSH
           command: |
             mkdir -p ~/.ssh
-            cat > ~/.ssh/config << EOF
+            cat > ~/.ssh/config \<< EOF
             Host $EC2_HOST
               HostName $EC2_HOST
               User ec2-user
