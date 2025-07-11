@@ -70,18 +70,17 @@ jobs:
 
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:YOUR_SSH_KEY_FINGERPRINT"
+            - "SHA256:YOUR_SSH_KEY_FINGERPRINT"  # Replace this with the actual fingerprint from CircleCI
 
       - run:
           name: Deploy to EC2
           command: |
             ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST '
-              docker login -u "$DOCKERHUB_USER" -p "$DOCKERHUB_PASS" &&
-              docker pull $DOCKERHUB_USER/demo-app &&
-              docker stop demo-app || true &&
-              docker rm demo-app || true &&
-              docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app
-            '
+        docker login -u "$DOCKERHUB_USER" -p "$DOCKERHUB_PASS" &&
+        docker pull $DOCKERHUB_USER/demo-app &&
+        docker stop demo-app || true &&
+        docker rm demo-app || true &&
+        docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app
 
 workflows:
   version: 2
