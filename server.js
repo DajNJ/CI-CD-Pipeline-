@@ -249,18 +249,11 @@ if (require.main === module) {
   });
 
   server.on('error', (err) => {
-    console.error('Server error:', err);
-    process.exit(1);
-  });
-
-  process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-    process.exit(1);
-  });
-
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use`);
+    } else {
+      console.error('Server error:', err);
+    }
   });
 }
 
