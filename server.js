@@ -240,7 +240,7 @@ app.use((err, req, res, _next) => {
 
 // Start server only if this file is run directly (not imported)
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, 'localhost', () => {
     console.log(`CI/CD Demo App running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`Version: ${process.env.APP_VERSION || '1.0.0'}`);
