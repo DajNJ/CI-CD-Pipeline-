@@ -45,6 +45,10 @@ jobs:
           command: |
             echo "No frontend build process detected. Add if needed."
             # For example, run: npm run build
+      - run: 
+          name: Docker Image 
+          command: docker build -t demo-app . 
+                   docker run -d -p 3000:3000 demo-app
 
 workflows:
   version: 2
