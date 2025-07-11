@@ -4,7 +4,6 @@ jobs:
   build:
     docker:
       - image: cimg/base:stable
-
     steps:
       - checkout
 
@@ -29,19 +28,19 @@ jobs:
   test:
     docker:
       - image: cimg/base:stable
-
     steps:
       - attach_workspace:
           at: .
 
-      - setup_remote_docker
+      - setup_remote_docker:
+          docker_layer_caching: true  # ✅ added missing setup_remote_docker
 
       - run:
           name: Run Container for Testing
           command: |
             docker run -d -p 3000:5000 --name test-app $DOCKERHUB_USER/demo-app
-            sleep 10  # Give app time to start
-            curl --fail http://localhost:3000/health
+            sleep 10
+            curl --fail http://localhost:3000/health || (docker logs test-app && exit 1)
 
       - run:
           name: Clean Up Container
@@ -51,10 +50,12 @@ jobs:
   deploy:
     docker:
       - image: cimg/base:stable
-
     steps:
       - attach_workspace:
           at: .
+
+      - setup_remote_docker:
+          docker_layer_caching: true
 
       - run:
           name: Push Image to Docker Hub
@@ -65,7 +66,7 @@ jobs:
       - run:
           name: Trigger Render Deploy
           command: |
-            curl -X POST https://api.render.com/deploy/ci-cd-demo-app.onrender.com
+            curl -X POST https://api.render.com/deploy/ci-cd-demo-app.onrender.com  # ✅ Replace with your actual deploy hook URL
 
 workflows:
   version: 2
