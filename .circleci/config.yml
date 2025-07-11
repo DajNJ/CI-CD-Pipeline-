@@ -48,7 +48,7 @@ jobs:
       - run: 
           name: Docker Image 
           command: docker build -t demo-app . 
-                   docker run -d -p 3000:3000 demo-app
+          command: docker run -d -p 3000:3000 demo-app
 
 workflows:
   version: 2
