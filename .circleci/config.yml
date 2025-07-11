@@ -73,11 +73,14 @@ jobs:
             - "SHA256:gq6pk3gu/cf0oLTT2MaJY5rqZAF2IVEVZVpNEVy2WAI"  # Replace with actual fingerprint from CircleCI SSH Keys settings
 
       - run:
-          name: Debug SSH Keys
+          name: Show Public Keys (Add these to EC2 ~/.ssh/authorized_keys)
           command: |
-            ssh-add -l
-            ls -la ~/.ssh/
-            for key in ~/.ssh/id_rsa_*; do echo "Key: $key"; ssh-keygen -y -f "$key" 2>/dev/null || echo "Failed to read $key"; done
+            echo "=== Add these public keys to your EC2 instance ==="
+            for key in ~/.ssh/id_rsa_*; do
+              echo "Key file: $key"
+              ssh-keygen -y -f "$key" 2>/dev/null || echo "Failed to read $key"
+              echo "---"
+            done
 
       - run:
           name: Deploy to EC2
@@ -87,7 +90,7 @@ jobs:
               docker pull $DOCKERHUB_USER/demo-app &&
               docker stop demo-app || true &&
               docker rm demo-app || true &&
-              docker run -d -p 8081:3000 --name demo-app $DOCKERHUB_USER/demo-app
+              docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app
             '
 
 workflows:
