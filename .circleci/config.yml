@@ -70,7 +70,7 @@ jobs:
 
       - add_ssh_keys:
           fingerprints:
-            - "SHA256:YOUR_SSH_KEY_FINGERPRINT"  # Replace this with the actual fingerprint from CircleCI
+            - "SHA256:gq6pk3gu/cf0oLTT2MaJY5rqZAF2IVEVZVpNEVy2WAI"  # Replace with actual fingerprint from CircleCI SSH Keys settings
 
       - run:
           name: Deploy to EC2
