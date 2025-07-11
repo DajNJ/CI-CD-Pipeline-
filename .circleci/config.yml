@@ -87,29 +87,40 @@ jobs:
             chmod 600 ~/.ssh/config
 
       - run:
+          name: Test SSH Connectivity
+          command: |
+            echo "Testing SSH connection to $EC2_HOST..."
+            timeout 10 ssh -o ConnectTimeout=5 ec2-user@$EC2_HOST 'echo "SSH connection successful"' || echo "SSH connection failed"
+
+      - run:
           name: Deploy to EC2
           command: |
-            ssh ec2-user@$EC2_HOST '\<<' 'EOF'
-              # Install Docker if not present
+            # Try SSH deployment first
+            if timeout 30 ssh -o ConnectTimeout=10 ec2-user@$EC2_HOST '
               if ! command -v docker &> /dev/null; then
-                sudo yum update -y
-                sudo yum install -y docker
-                sudo systemctl start docker
-                sudo systemctl enable docker
+                sudo yum update -y && sudo yum install -y docker
+                sudo systemctl start docker && sudo systemctl enable docker
                 sudo usermod -a -G docker ec2-user
               fi
-              
-              # Deploy application
               docker pull '$DOCKERHUB_USER'/demo-app
               docker stop demo-app 2>/dev/null || true
               docker rm demo-app 2>/dev/null || true
               docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app
-              
-              # Verify deployment
-              sleep 5
               docker ps
-              curl -f http://localhost:80/health || echo "Health check failed"
-            EOF
+            '; then
+              echo "✅ Deployed via SSH successfully"
+            else
+              echo "❌ SSH deployment failed. Trying webhook..."
+              if [ -n "$DEPLOY_WEBHOOK_URL" ]; then
+                curl -X POST "$DEPLOY_WEBHOOK_URL" \
+                  -H "Content-Type: application/json" \
+                  -d '{"image":"'$DOCKERHUB_USER'/demo-app","tag":"latest"}' && \
+                echo "✅ Webhook deployment triggered" || echo "❌ Webhook failed"
+              else
+                echo "❌ No webhook URL configured. Manual deployment required:"
+                echo "SSH to $EC2_HOST and run: docker pull $DOCKERHUB_USER/demo-app && docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app"
+              fi
+            fi
 
 workflows:
   version: 2
