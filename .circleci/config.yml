@@ -114,7 +114,8 @@ jobs:
             echo "Starting deployment to $EC2_HOST..."
             
             # Create deployment script
-                        #!/bin/bash
+            cat > deploy.sh \\<< 'SCRIPT'
+            #!/bin/bash
             set -e
             
             echo "=== Installing Docker ==="
@@ -169,3 +170,4 @@ workflows:
       - deploy:
           requires:
             - test
+cat > deploy.sh \<< 'SCRIPT'
