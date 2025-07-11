@@ -89,7 +89,7 @@ jobs:
       - run:
           name: Deploy to EC2
           command: |
-            ssh ec2-user@$EC2_HOST << 'EOF'
+            ssh ec2-user@$EC2_HOST '\<<' 'EOF'
               # Install Docker if not present
               if ! command -v docker &> /dev/null; then
                 sudo yum update -y
@@ -100,10 +100,10 @@ jobs:
               fi
               
               # Deploy application
-              docker pull $DOCKERHUB_USER/demo-app
+              docker pull '$DOCKERHUB_USER'/demo-app
               docker stop demo-app 2>/dev/null || true
               docker rm demo-app 2>/dev/null || true
-              docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app
+              docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app
               
               # Verify deployment
               sleep 5
