@@ -111,34 +111,52 @@ jobs:
       - run:
           name: Deploy to EC2
           command: |
-            if ssh ec2-user@$EC2_HOST '
-              # Install Docker if needed
-              if ! command -v docker &> /dev/null; then
-                sudo yum update -y
-                sudo yum install -y docker
-                sudo systemctl start docker
-                sudo systemctl enable docker
-                sudo usermod -a -G docker ec2-user
-                newgrp docker
-              fi
-              
-              # Deploy application
-              docker pull '$DOCKERHUB_USER'/demo-app
-              docker stop demo-app 2>/dev/null || true
-              docker rm demo-app 2>/dev/null || true
-              docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app
-              
-              echo "Container status:"
-              docker ps
-              sleep 5
-              curl -f http://localhost:80/health || echo "Health check failed"
-            '; then
-              echo "✅ Deployment successful"
+            echo "Starting deployment to $EC2_HOST..."
+            
+            # Create deployment script
+            cat > deploy.sh << 'SCRIPT'
+            #!/bin/bash
+            set -e
+            
+            echo "=== Installing Docker ==="
+            if ! command -v docker &> /dev/null; then
+              sudo yum update -y
+              sudo yum install -y docker
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -a -G docker ec2-user
+            fi
+            
+            echo "=== Docker status ==="
+            sudo systemctl status docker --no-pager
+            
+            echo "=== Pulling image ==="
+            sudo docker pull DOCKERHUB_USER_PLACEHOLDER/demo-app
+            
+            echo "=== Stopping existing container ==="
+            sudo docker stop demo-app 2>/dev/null || echo "No existing container"
+            sudo docker rm demo-app 2>/dev/null || echo "No container to remove"
+            
+            echo "=== Starting new container ==="
+            sudo docker run -d -p 80:3000 --name demo-app DOCKERHUB_USER_PLACEHOLDER/demo-app
+            
+            echo "=== Verifying deployment ==="
+            sleep 10
+            sudo docker ps
+            sudo docker logs demo-app
+            curl -f http://localhost:80/health || echo "Health check failed"
+            SCRIPT
+            
+            # Replace placeholder with actual username
+            sed -i "s/DOCKERHUB_USER_PLACEHOLDER/$DOCKERHUB_USER/g" deploy.sh
+            
+            # Copy and execute script on EC2
+            if scp deploy.sh ec2-user@$EC2_HOST:~/deploy.sh && \
+               ssh ec2-user@$EC2_HOST 'chmod +x ~/deploy.sh && ~/deploy.sh'; then
+              echo "✅ Deployment completed successfully"
             else
-              echo "❌ Deployment failed - check EC2 security group allows SSH (port 22)"
-              echo "Manual deployment: SSH to $EC2_HOST and run:"
-              echo "docker pull $DOCKERHUB_USER/demo-app"
-              echo "docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app"
+              echo "❌ Deployment failed"
+              echo "Check CircleCI logs and EC2 instance manually"
             fi
 
 workflows:
