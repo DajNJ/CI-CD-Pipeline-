@@ -48,6 +48,8 @@ jobs:
       - run: 
           name: Docker Image 
           command: docker build -t demo-app . 
+      - run: 
+          name: Container 
           command: docker run -d -p 3000:3000 demo-app
 
 workflows:
