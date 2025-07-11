@@ -38,7 +38,7 @@ jobs:
       - run:
           name: Run Container for Testing
           command: |
-            docker run -d -p 3000:5000 --name test-app $DOCKERHUB_USER/demo-app
+            docker run -d -p 3000:3000 --name test-app $DOCKERHUB_USER/demo-app
             sleep 10
             curl --fail http://localhost:3000/health || (docker logs test-app && exit 1)
 
