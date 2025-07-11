@@ -50,7 +50,7 @@ jobs:
 
   deploy:
     docker:
-      - image: cimg/base:stable
+      - image: cimg/aws:stable
     steps:
       - attach_workspace:
           at: .
@@ -68,19 +68,19 @@ jobs:
           command: |
             docker push $DOCKERHUB_USER/demo-app
 
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:gawGUhMNUoPz3XJFJrJSrf2xFRxH9SlqDMlNHzB/6Wg"  # Add your EC2 key fingerprint from CircleCI
-
       - run:
-          name: Deploy to EC2
+          name: Deploy to EC2 via SSM
           command: |
-            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST '
-              docker pull '$DOCKERHUB_USER'/demo-app &&
-              docker stop demo-app || true &&
-              docker rm demo-app || true &&
-              docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app
-            '
+            aws ssm send-command \
+              --instance-ids "$EC2_INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters 'commands=[
+                "docker pull '$DOCKERHUB_USER'/demo-app",
+                "docker stop demo-app || true",
+                "docker rm demo-app || true",
+                "docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app"
+              ]' \
+              --region "$AWS_REGION"
 
 workflows:
   version: 2
