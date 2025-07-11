@@ -77,11 +77,13 @@ jobs:
           command: |
             ssh-add -l
             ls -la ~/.ssh/
+            ssh-keygen -y -f ~/.ssh/id_rsa_* | head -1
 
       - run:
           name: Deploy to EC2
           command: |
-            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$EC2_HOST '
+            KEY_FILE=$(ls ~/.ssh/id_rsa_*)
+            ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$EC2_HOST '
               docker login -u "$DOCKERHUB_USER" -p "$DOCKERHUB_PASS" &&
               docker pull $DOCKERHUB_USER/demo-app &&
               docker stop demo-app || true &&
