@@ -5,7 +5,7 @@ services:
     env: docker
     plan: free
     repo: https://github.com/DajNJ/CI-CD-Pipeline-
-    region: oregon  # or frankfurt, singapore, etc.
+    region: frankfurt  # or frankfurt, singapore, etc.
     branch: main
     autoDeploy: true
     dockerfilePath: ./Dockerfile

@@ -1,68 +1,80 @@
 version: 2.1
 
-executors:
-  node-executor:
-    docker:
-      - image: cimg/node:18.20.2  # Choose Node.js version that matches your app
-    working_directory: ~/project
-
 jobs:
-  install-deps:
-    executor: node-executor
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - node-deps-{{ checksum "package-lock.json" }}
-      - run:
-          name: Install dependencies
-          command: npm install
-      - save_cache:
-          paths:
-            - node_modules
-          key: node-deps-{{ checksum "package-lock.json" }}
-
-  run-tests:
-    executor: node-executor
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - node-deps-{{ checksum "package-lock.json" }}
-      - run:
-          name: Run tests
-          command: npm test 
-      - run: 
-          name: docker-engine
-          command: docker desktop start
-
   build:
-    executor: node-executor
+    docker:
+      - image: cimg/base:stable
+
     steps:
       - checkout
-      - restore_cache:
-          keys:
-            - node-deps-{{ checksum "package-lock.json" }}
+
+      - setup_remote_docker:
+          docker_layer_caching: true
+
       - run:
-          name: Build frontend (if applicable)
+          name: Log in to Docker Hub
           command: |
-            echo "No frontend build process detected. Add if needed."
-            # For example, run: npm run build
-      - run: 
-          name: Docker Image 
-          command: docker build -t demo-app . 
-      - run: 
-          name: Container 
-          command: docker run -d -p 3000:3000 demo-app
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t $DOCKERHUB_USER/ci-cd-demo-app:latest .
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  test:
+    docker:
+      - image: cimg/base:stable
+
+    steps:
+      - attach_workspace:
+          at: .
+
+      - setup_remote_docker
+
+      - run:
+          name: Run Container for Testing
+          command: |
+            docker run -d -p 5000:3000 --name test-app $DOCKERHUB_USER/ci-cd-demo-app:latest
+            sleep 10  # Give app time to start
+            curl --fail http://localhost:5000/health
+
+      - run:
+          name: Clean Up Container
+          command: |
+            docker stop test-app && docker rm test-app
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+
+    steps:
+      - attach_workspace:
+          at: .
+
+      - run:
+          name: Push Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            docker push $DOCKERHUB_USER/ci-cd-demo-app:latest
+
+      - run:
+          name: Trigger Render Deploy
+          command: |
+            curl -X POST https://api.render.com/deploy/ci-cd-demo-app.onrender.com
 
 workflows:
   version: 2
-  ci-pipeline:
+  build_test_deploy:
     jobs:
-      - install-deps
-      - run-tests:
+      - build
+      - test:
           requires:
-            - install-deps
-      - build:
+            - build
+      - deploy:
           requires:
-            - run-tests
+            - test
