@@ -39,9 +39,9 @@ jobs:
       - run:
           name: Run Container for Testing
           command: |
-            docker run -d -p 5000:3000 --name test-app $DOCKERHUB_USER/ci-cd-demo-app:latest
+            docker run -d -p 3000:5000 --name test-app $DOCKERHUB_USER/ci-cd-demo-app:latest
             sleep 10  # Give app time to start
-            curl --fail http://localhost:5000/health
+            curl --fail http://localhost:3000/health
 
       - run:
           name: Clean Up Container
