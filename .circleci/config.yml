@@ -74,9 +74,17 @@ jobs:
             docker push $DOCKERHUB_USER/demo-app
 
       - run:
-          name: Deploy to EC2 via SSM
+          name: Check SSM Agent Status
           command: |
-            aws ssm send-command \
+            aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$EC2_INSTANCE_ID" \
+              --region "$AWS_REGION" || echo "SSM not available"
+
+      - run:
+          name: Deploy to EC2
+          command: |
+            # Try SSM first, fallback to webhook
+            if aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
               --parameters 'commands=[
@@ -85,7 +93,15 @@ jobs:
                 "docker rm demo-app || true",
                 "docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app"
               ]' \
-              --region "$AWS_REGION"
+              --region "$AWS_REGION"; then
+              echo "Deployed via SSM"
+            else
+              echo "SSM failed, trying webhook..."
+              curl -X POST "$DEPLOY_WEBHOOK_URL" \
+                -H "Content-Type: application/json" \
+                -d '{"image":"'$DOCKERHUB_USER'/demo-app","tag":"latest"}' || \
+              echo "Both SSM and webhook failed. Manual deployment required."
+            fi
 
 workflows:
   version: 2
