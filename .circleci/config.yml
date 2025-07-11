@@ -68,30 +68,12 @@ jobs:
           command: |
             docker push $DOCKERHUB_USER/demo-app
 
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:gq6pk3gu/cf0oLTT2MaJY5rqZAF2IVEVZVpNEVy2WAI"  # Replace with actual fingerprint from CircleCI SSH Keys settings
-
       - run:
-          name: Show Public Keys (Add these to EC2 ~/.ssh/authorized_keys)
+          name: Trigger Deployment Webhook
           command: |
-            echo "=== Add these public keys to your EC2 instance ==="
-            for key in ~/.ssh/id_rsa_*; do
-              echo "Key file: $key"
-              ssh-keygen -y -f "$key" 2>/dev/null || echo "Failed to read $key"
-              echo "---"
-            done
-
-      - run:
-          name: Deploy to EC2
-          command: |
-            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$EC2_HOST '
-              docker login -u "$DOCKERHUB_USER" -p "$DOCKERHUB_PASS" &&
-              docker pull $DOCKERHUB_USER/demo-app &&
-              docker stop demo-app || true &&
-              docker rm demo-app || true &&
-              docker run -d -p 80:3000 --name demo-app $DOCKERHUB_USER/demo-app
-            '
+            curl -X POST "$DEPLOY_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{"image":"'$DOCKERHUB_USER'/demo-app","tag":"latest"}' || echo "Webhook failed - manual deployment required"
 
 workflows:
   version: 2
