@@ -73,9 +73,15 @@ jobs:
             - "SHA256:gq6pk3gu/cf0oLTT2MaJY5rqZAF2IVEVZVpNEVy2WAI"  # Replace with actual fingerprint from CircleCI SSH Keys settings
 
       - run:
+          name: Debug SSH Keys
+          command: |
+            ssh-add -l
+            ls -la ~/.ssh/
+
+      - run:
           name: Deploy to EC2
           command: |
-            ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST '
+            ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ec2-user@$EC2_HOST '
               docker login -u "$DOCKERHUB_USER" -p "$DOCKERHUB_PASS" &&
               docker pull $DOCKERHUB_USER/demo-app &&
               docker stop demo-app || true &&
