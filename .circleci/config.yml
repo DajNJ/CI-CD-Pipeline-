@@ -83,25 +83,36 @@ jobs:
       - run:
           name: Deploy to EC2
           command: |
-            # Try SSM first, fallback to webhook
-            if aws ssm send-command \
+            # Send SSM command and wait for completion
+            COMMAND_ID=$(aws ssm send-command \
               --instance-ids "$EC2_INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
               --parameters 'commands=[
+                "sudo yum update -y",
+                "sudo yum install -y docker",
+                "sudo systemctl start docker",
+                "sudo systemctl enable docker",
+                "sudo usermod -a -G docker ec2-user",
                 "docker pull '$DOCKERHUB_USER'/demo-app",
                 "docker stop demo-app || true",
                 "docker rm demo-app || true",
-                "docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app"
+                "docker run -d -p 80:3000 --name demo-app '$DOCKERHUB_USER'/demo-app",
+                "docker ps"
               ]' \
-              --region "$AWS_REGION"; then
-              echo "Deployed via SSM"
-            else
-              echo "SSM failed, trying webhook..."
-              curl -X POST "$DEPLOY_WEBHOOK_URL" \
-                -H "Content-Type: application/json" \
-                -d '{"image":"'$DOCKERHUB_USER'/demo-app","tag":"latest"}' || \
-              echo "Both SSM and webhook failed. Manual deployment required."
-            fi
+              --region "$AWS_REGION" \
+              --query 'Command.CommandId' \
+              --output text)
+            
+            echo "Command ID: $COMMAND_ID"
+            
+            # Wait for command completion
+            sleep 30
+            
+            # Check command status
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$EC2_INSTANCE_ID" \
+              --region "$AWS_REGION"
 
 workflows:
   version: 2
