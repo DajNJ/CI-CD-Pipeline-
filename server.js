@@ -255,6 +255,9 @@ if (require.main === module) {
       console.error('Server error:', err);
     }
   });
+
+  // Keep process alive
+  process.stdin.resume();
 }
 
 module.exports = app;
