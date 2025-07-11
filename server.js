@@ -1,6 +1,16 @@
-const express = require('express');
-const path = require('path');
-require('dotenv').config();
+let express, path;
+try {
+  express = require('express');
+  path = require('path');
+  require('dotenv').config();
+} catch (err) {
+  console.error('Module loading error:', err);
+  process.exit(1);
+}
+
+process.on('exit', (code) => {
+  console.log('Process exiting with code:', code);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
